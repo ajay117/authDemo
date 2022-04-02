@@ -37,7 +37,7 @@ app.post("/register", async (req, res) => {
     password: hash,
   });
   await user.save();
-  req.session.user_id = user.user_id;
+  req.session.user_id = user._id;
   res.redirect("/");
 });
 
@@ -47,23 +47,26 @@ app.get("/login", (req, res) => {
 
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
-  console.log({ username, password });
   const user = await User.findOne({ username });
   const validPassword = await bcrypt.compare(password, user.password);
   if (validPassword) {
-    req.session.user_id = user.user_id;
+    req.session.user_id = user._id;
     res.redirect("/secret");
   } else {
     res.redirect("/login");
   }
 });
 
+app.post("/logout", (req, res) => {
+  req.session.user_id = null;
+  res.redirect("/login");
+});
+
 app.get("/secret", (req, res) => {
   if (!req.session.user_id) {
-    res.send("This is secret! You cannot see me unless you are logged in");
-  } else {
-    res.redirect("/login");
+    return res.redirect("/login");
   }
+  res.render("secret");
 });
 
 app.listen(3000, () => {
