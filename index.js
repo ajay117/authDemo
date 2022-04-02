@@ -3,6 +3,7 @@ const app = express();
 const User = require("./models/user");
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
+const session = require("express-session");
 
 mongoose
   .connect("mongodb://localhost:27017/authDemo")
@@ -18,6 +19,7 @@ app.set("view engine", "ejs");
 app.set("views", "views");
 
 app.use(express.urlencoded({ extended: true }));
+app.use(session({ secret: "notagoodsecret" }));
 
 app.get("/", (req, res) => {
   res.send("This is the homepage");
@@ -35,6 +37,7 @@ app.post("/register", async (req, res) => {
     password: hash,
   });
   await user.save();
+  req.session.user_id = user.user_id;
   res.redirect("/");
 });
 
@@ -44,17 +47,23 @@ app.get("/login", (req, res) => {
 
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
+  console.log({ username, password });
   const user = await User.findOne({ username });
   const validPassword = await bcrypt.compare(password, user.password);
   if (validPassword) {
-    res.send("Yay welcome");
+    req.session.user_id = user.user_id;
+    res.redirect("/secret");
   } else {
-    res.send("Try again");
+    res.redirect("/login");
   }
 });
 
 app.get("/secret", (req, res) => {
-  res.send("This is secret! You cannot see me unless you are logged in");
+  if (!req.session.user_id) {
+    res.send("This is secret! You cannot see me unless you are logged in");
+  } else {
+    res.redirect("/login");
+  }
 });
 
 app.listen(3000, () => {
